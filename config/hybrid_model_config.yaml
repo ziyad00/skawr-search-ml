@@ -1,0 +1,191 @@
+# SKAWR Hybrid Transformer-Mamba Model Configuration (2026)
+
+model:
+  # Model architecture type
+  model_type: "hybrid_transformer_mamba"
+
+  # Base model parameters
+  vocab_size: 30000
+  hidden_size: 512
+  max_position_embeddings: 512
+
+  # Transformer configuration
+  num_attention_heads: 8
+  intermediate_size: 2048
+  attention_probs_dropout_prob: 0.1
+
+  # Mamba configuration
+  mamba_d_state: 64    # SSM state dimension
+  mamba_d_conv: 4      # Local convolution width
+  mamba_expand: 2      # Expansion factor
+
+  # Hybrid architecture layout
+  num_layers: 6
+  layer_pattern: "TMTMTM"  # T=Transformer, M=Mamba, H=Hybrid
+
+  # Alternative patterns for different use cases:
+  # "TMTMTM" - Balanced (default): Good for general search
+  # "TTMMMM" - Efficiency-focused: 5x faster, good for long sequences
+  # "TTTTMM" - Semantic-focused: Better understanding, slower
+  # "MMMTTT" - Mamba early: Good for preprocessing long text
+  # "HTTTTH" - Hybrid gates: Adaptive layer selection
+
+  # Task-specific heads
+  embedding_dim: 512
+  num_domains: 4
+  num_specificity_levels: 3
+
+  # Regularization
+  hidden_dropout_prob: 0.1
+  layer_norm_eps: 1e-12
+
+  # Special tokens
+  pad_token_id: 0
+  cls_token_id: 1
+  sep_token_id: 2
+  mask_token_id: 3
+
+training:
+  # Training parameters optimized for hybrid model
+  batch_size: 32
+  learning_rate: 3e-5  # Slightly lower for hybrid stability
+  num_epochs: 3
+  warmup_steps: 1000
+  max_grad_norm: 1.0
+
+  # Multi-task learning weights
+  task_weights:
+    masked_lm: 1.0
+    domain_classification: 0.5
+    specificity_prediction: 0.5
+    contrastive_learning: 1.0
+
+  # Hybrid-specific training
+  mamba_lr_multiplier: 0.5  # Mamba layers learn slower
+  gradient_accumulation_steps: 2  # For larger effective batch size
+
+  # Optimizer
+  optimizer: "adamw"
+  weight_decay: 0.01
+  adam_epsilon: 1e-8
+
+  # Learning rate scheduler
+  lr_scheduler: "linear_with_warmup"
+
+  # Evaluation and saving
+  eval_steps: 500
+  save_steps: 1000
+  logging_steps: 100
+
+  # Early stopping
+  early_stopping_patience: 3
+  early_stopping_threshold: 0.001
+
+data:
+  # Data configuration
+  train_file: "data/processed/train.csv"
+  validation_file: "data/processed/validation.csv"
+  test_file: "data/processed/test.csv"
+
+  # Text processing optimized for hybrid
+  max_sequence_length: 1024  # Mamba can handle longer sequences efficiently
+  tokenizer_type: "custom"
+
+  # Data loading
+  dataloader_num_workers: 4
+  pin_memory: true
+
+  # Augmentation
+  data_augmentation:
+    enabled: true
+    synonym_replacement_prob: 0.1
+    random_deletion_prob: 0.05
+    random_insertion_prob: 0.05
+
+hardware:
+  # Hardware configuration
+  device: "auto"
+  mixed_precision: true
+  gradient_checkpointing: true  # Important for memory efficiency
+
+  # Memory optimization for hybrid models
+  use_mamba_fast_path: true  # Use optimized Mamba kernels when available
+  compile_model: true  # PyTorch 2.0 compilation for speed
+
+  # Multi-GPU support
+  use_ddp: false
+  gpu_ids: [0]
+
+logging:
+  # Experiment tracking
+  use_wandb: true
+  wandb_project: "skawr-hybrid-search"
+  wandb_entity: null
+
+  # Local logging
+  output_dir: "models/checkpoints/hybrid"
+  logging_dir: "logs/hybrid"
+
+  # Checkpointing
+  save_total_limit: 3
+  metric_for_best_model: "eval_loss"
+  greater_is_better: false
+
+  # Hybrid-specific metrics
+  log_layer_stats: true  # Log Transformer vs Mamba layer performance
+  log_memory_usage: true
+
+inference:
+  # Inference configuration optimized for hybrid
+  batch_size: 128  # Mamba allows larger batches
+  max_sequence_length: 1024
+
+  # Performance optimizations
+  use_onnx: false
+  quantization: false
+  use_torch_compile: true  # 2026 optimization
+
+  # Caching
+  enable_cache: true
+  cache_size: 20000  # Larger cache due to efficiency
+
+# Architecture presets for different use cases
+presets:
+  balanced:
+    layer_pattern: "TMTMTM"
+    description: "Balanced Transformer-Mamba for general search"
+    use_case: "General marketplace search"
+
+  efficiency:
+    layer_pattern: "TTMMMM"
+    max_sequence_length: 2048
+    description: "Mamba-heavy for long sequences and fast inference"
+    use_case: "Long product descriptions, real-time search"
+
+  semantic:
+    layer_pattern: "TTTTMM"
+    num_attention_heads: 12
+    description: "Transformer-heavy for better semantic understanding"
+    use_case: "Complex queries, semantic matching"
+
+  adaptive:
+    layer_pattern: "HTTTTH"
+    description: "Hybrid gates that adapt to input"
+    use_case: "Variable query complexity"
+
+# 2026-specific optimizations
+optimizations:
+  # Latest ML techniques
+  use_flash_attention: true
+  use_selective_checkpoint: true
+  gradient_compression: true
+
+  # Memory efficiency
+  use_activation_checkpointing: true
+  offload_to_cpu: false
+  use_zero_optimizer: false
+
+  # Speed optimizations
+  fused_kernels: true
+  custom_cuda_ops: true
+  tensorrt_optimization: false
