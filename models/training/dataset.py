@@ -359,6 +359,27 @@ def create_dataloaders(
 
     return train_dataloader, val_dataloader
 
+def create_single_dataloader(
+    data_file: str,
+    config: DataConfig,
+    batch_size: int = 32,
+    num_workers: int = 4,
+    shuffle: bool = False
+) -> DataLoader:
+    """Create a single dataloader for testing/evaluation."""
+
+    dataset = SKAWRDataset(data_file, config, mode="eval")
+
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=num_workers,
+        pin_memory=True
+    )
+
+    return dataloader
+
 def create_tokenizer(train_file: str, vocab_size: int = 30000) -> AutoTokenizer:
     """Create custom tokenizer trained on the dataset."""
     # For now, use pre-trained multilingual tokenizer
